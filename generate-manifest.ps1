@@ -1,11 +1,10 @@
 $ErrorActionPreference = 'Stop'
-
-Set-Location $PSScriptRoot
-
-$extensions = @('*.png', '*.jpg', '*.jpeg', '*.webp', '*.gif', '*.svg')
-
-$paths = Get-ChildItem -Recurse -File -Include $extensions |
-  ForEach-Object { $_.FullName.Substring((Get-Location).Path.Length + 1).Replace('\\', '/') }
-
-$paths | ConvertTo-Json | Set-Content -Encoding UTF8 "images.manifest.json"
-Write-Host ("Wrote {0} paths to images.manifest.json" -f $paths.Count)
+$root = $PSScriptRoot
+$extensions = @('.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.avif')
+$paths = @(Get-ChildItem -LiteralPath $root -Recurse -File |
+  Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' -and $extensions -contains $_.Extension.ToLowerInvariant() } |
+  ForEach-Object { $_.FullName.Substring($root.Length + 1).Replace('\', '/') } |
+  Sort-Object)
+$json = ConvertTo-Json -InputObject $paths
+[System.IO.File]::WriteAllText((Join-Path $root 'images.manifest.json'), $json, [System.Text.UTF8Encoding]::new($false))
+Write-Output ("Generated {0} image paths for {1}" -f $paths.Count, (Split-Path $root -Leaf))
